@@ -289,4 +289,4 @@ class FormView(discord.ui.View):
             await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
 
     async def on_timeout(self):
-        store.delete(self.user_id)
+        pass  # セッションは SESSION_TIMEOUT_SECONDS で自動失効するため削除不要
