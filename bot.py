@@ -7,47 +7,18 @@
   /apply_close  - 応募受付を締め切る（管理者ロール限定）
 """
 
-import json
-import os
 import discord
 from discord import app_commands
 import config
 from src.views.start_view import StartView
 from src.utils import extract_guests_from_title
+import src.bot_state as bot_state
 
 intents = discord.Intents.default()
 intents.message_content = True
 
 bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
-
-# スレッドID → StartView のマッピング（締切操作用）
-active_views: dict[int, StartView] = {}
-# スレッドID → 応募メッセージID のマッピング
-apply_messages: dict[int, int] = {}
-
-APPLY_STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "apply_state.json")
-
-
-def _load_apply_state():
-    if os.path.exists(APPLY_STATE_FILE):
-        with open(APPLY_STATE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-
-def _save_apply_state():
-    os.makedirs(os.path.dirname(APPLY_STATE_FILE), exist_ok=True)
-    state = {
-        str(tid): {
-            "msg_id": apply_messages[tid],
-            "guests": active_views[tid].guests,
-            "event_type": active_views[tid].event_type,
-        }
-        for tid in active_views if tid in apply_messages
-    }
-    with open(APPLY_STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False)
 
 
 def _is_admin(interaction: discord.Interaction) -> bool:
@@ -74,12 +45,12 @@ async def on_ready():
     bot.add_view(StartView(guests=[], event_type="custom", is_open=True))
 
     # apply状態を復元
-    state = _load_apply_state()
+    state = bot_state.load_apply_state()
     for tid_str, info in state.items():
         tid = int(tid_str)
         view = StartView(guests=info["guests"], event_type=info["event_type"], is_open=True)
-        active_views[tid] = view
-        apply_messages[tid] = info["msg_id"]
+        bot_state.active_views[tid] = view
+        bot_state.apply_messages[tid] = info["msg_id"]
 
     await tree.sync(guild=discord.Object(id=config.SERVER_ID))
     print(f"Bot起動: {bot.user}")
@@ -112,7 +83,7 @@ async def apply_open(interaction: discord.Interaction):
         return
 
     view = StartView(guests=guests, event_type=event_type, is_open=True)
-    active_views[thread.id] = view
+    bot_state.active_views[thread.id] = view
 
     event_label = "コーチングイベント" if event_type == "coaching" else "対抗カスタム"
     embed = discord.Embed(
@@ -127,8 +98,8 @@ async def apply_open(interaction: discord.Interaction):
         view=view,
         wait=True
     )
-    apply_messages[thread.id] = msg.id
-    _save_apply_state()
+    bot_state.apply_messages[thread.id] = msg.id
+    bot_state.save_apply_state()
 
 
 @tree.command(
@@ -148,8 +119,8 @@ async def apply_close(interaction: discord.Interaction):
         await interaction.followup.send("このコマンドはスレッド内でのみ使用できます。", ephemeral=True)
         return
 
-    view = active_views.get(thread.id)
-    msg_id = apply_messages.get(thread.id)
+    view = bot_state.active_views.get(thread.id)
+    msg_id = bot_state.apply_messages.get(thread.id)
     if not view or not msg_id:
         await interaction.followup.send("このスレッドに有効な受付メッセージが見つかりません。", ephemeral=True)
         return
@@ -162,9 +133,9 @@ async def apply_close(interaction: discord.Interaction):
     except discord.NotFound:
         pass
 
-    active_views.pop(thread.id, None)
-    apply_messages.pop(thread.id, None)
-    _save_apply_state()
+    bot_state.active_views.pop(thread.id, None)
+    bot_state.apply_messages.pop(thread.id, None)
+    bot_state.save_apply_state()
     await interaction.followup.send("**📪 応募受付を締め切りました。**")
 
 

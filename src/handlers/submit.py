@@ -13,6 +13,7 @@ import discord
 from src.forms.session import Session
 from src.formatter import build_submission_embed
 from src.sheets import upsert_participant
+import src.bot_state as bot_state
 
 SUBMISSIONS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "submissions")
 
@@ -60,4 +61,22 @@ async def handle_submit(interaction: discord.Interaction, session: Session, even
     _save_submissions(thread_id, submissions)
     print(f"[SUBMIT] {user} ({user.id}) が応募完了 / スレッド: {thread.name} / 回答: {session.answers}")
     await asyncio.to_thread(upsert_participant, user.id, user.display_name, str(user), session.answers, thread_name=thread.name)
+
+    # 応募ボタンメッセージを一番下に移動
+    if thread_id in bot_state.active_views:
+        from src.views.start_view import StartView
+        view_info = bot_state.active_views[thread_id]
+        old_msg_id = bot_state.apply_messages.get(thread_id)
+        if old_msg_id:
+            try:
+                old_msg = await thread.fetch_message(old_msg_id)
+                await old_msg.delete()
+            except discord.NotFound:
+                pass
+        new_view = StartView(guests=view_info.guests, event_type=view_info.event_type, is_open=True)
+        bot_state.active_views[thread_id] = new_view
+        new_apply_msg = await thread.send(view=new_view)
+        bot_state.apply_messages[thread_id] = new_apply_msg.id
+        bot_state.save_apply_state()
+
     return msg
