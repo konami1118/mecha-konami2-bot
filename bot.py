@@ -55,18 +55,20 @@ async def on_ready():
     guild=discord.Object(id=config.SERVER_ID)
 )
 async def apply_open(interaction: discord.Interaction):
+    await interaction.response.defer()
+
     if not _is_admin(interaction):
-        await interaction.response.send_message("このコマンドは管理者のみ使用できます。", ephemeral=True)
+        await interaction.followup.send("このコマンドは管理者のみ使用できます。", ephemeral=True)
         return
 
     thread = interaction.channel
     if not isinstance(thread, discord.Thread):
-        await interaction.response.send_message("このコマンドはスレッド内でのみ使用できます。", ephemeral=True)
+        await interaction.followup.send("このコマンドはスレッド内でのみ使用できます。", ephemeral=True)
         return
 
     guests, event_type = extract_guests_from_title(thread.name)
     if not guests:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "スレッドタイトルからゲスト名を取得できませんでした。\n"
             "タイトルに `ゲスト1 vs ゲスト2` の形式が含まれているか確認してください。",
             ephemeral=True
@@ -77,7 +79,6 @@ async def apply_open(interaction: discord.Interaction):
     active_views[thread.id] = view
 
     event_label = "コーチングイベント" if event_type == "coaching" else "対抗カスタム"
-    await interaction.response.defer()
     msg = await interaction.followup.send(
         f"**📢 応募受付を開始しました！**\n"
         f"イベント: **{event_label}** ／ ゲスト: **{' / '.join(guests)}**\n\n"
@@ -94,19 +95,21 @@ async def apply_open(interaction: discord.Interaction):
     guild=discord.Object(id=config.SERVER_ID)
 )
 async def apply_close(interaction: discord.Interaction):
+    await interaction.response.defer()
+
     if not _is_admin(interaction):
-        await interaction.response.send_message("このコマンドは管理者のみ使用できます。", ephemeral=True)
+        await interaction.followup.send("このコマンドは管理者のみ使用できます。", ephemeral=True)
         return
 
     thread = interaction.channel
     if not isinstance(thread, discord.Thread):
-        await interaction.response.send_message("このコマンドはスレッド内でのみ使用できます。", ephemeral=True)
+        await interaction.followup.send("このコマンドはスレッド内でのみ使用できます。", ephemeral=True)
         return
 
     view = active_views.get(thread.id)
     msg_id = apply_messages.get(thread.id)
     if not view or not msg_id:
-        await interaction.response.send_message("このスレッドに有効な受付メッセージが見つかりません。", ephemeral=True)
+        await interaction.followup.send("このスレッドに有効な受付メッセージが見つかりません。", ephemeral=True)
         return
 
     # ボタンを非活性に更新
@@ -118,7 +121,6 @@ async def apply_close(interaction: discord.Interaction):
         pass
 
     active_views.pop(thread.id, None)
-    await interaction.response.defer()
     await interaction.followup.send("**📪 応募受付を締め切りました。**")
 
 
