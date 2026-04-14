@@ -146,15 +146,6 @@ class FormView(discord.ui.View):
             select.callback = self._on_role_select
             self.add_item(select)
 
-            next_btn = discord.ui.Button(
-                label="次へ",
-                style=discord.ButtonStyle.success if pending_roles else discord.ButtonStyle.secondary,
-                disabled=not pending_roles,
-                row=1,
-            )
-            next_btn.callback = self._on_role_confirm
-            self.add_item(next_btn)
-
         elif step_key == "preferred_guest":
             options = [discord.SelectOption(label=g, value=g) for g in self.guests]
             options.append(discord.SelectOption(label="どちらでもOK", value="どちらでもOK"))
@@ -255,9 +246,9 @@ class FormView(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
             return
-        self._pending["main_role"] = {"values": interaction.data["values"]}
-        self._build()
-        await interaction.response.edit_message(content=self.current_prompt(), view=self)
+        roles = interaction.data["values"]
+        value = "/".join(roles)
+        await self._advance(interaction, value)
 
     async def _on_role_confirm(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id:
