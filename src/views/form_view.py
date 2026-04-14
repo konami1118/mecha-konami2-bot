@@ -12,8 +12,8 @@ from src.forms.session import store
 from src.views.modals import BattletagModal, CommentModal
 
 PLATFORM_EMOJIS = {
-    "PC": "<a:or_ar:1430108348279164959>",
-    "CS": "<a:or_ar:1430108348279164959>",
+    "PC": "<:p_pc:962736429333643334>",
+    "CS": "<:p_playstation:962735784073502730>",
 }
 
 PLATFORM_VALUE_EMOJIS = {

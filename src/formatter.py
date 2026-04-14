@@ -46,7 +46,7 @@ def build_submission_embed(user: discord.Member, answers: dict, event_type: str 
     )
     embed.set_author(name=user.display_name, icon_url=user.display_avatar.url)
 
-    embed.add_field(name="バトルタグ", value=answers.get("battletag", "未入力"), inline=False)
+    embed.add_field(name=f"{EMOJI_PLATFORM} バトルタグ", value=answers.get("battletag", "未入力"), inline=False)
     platform = answers.get("platform", "")
     platform_emoji = PLATFORM_VALUE_EMOJIS.get(platform, "")
     platform_value = f"{platform_emoji} {platform}".strip() if platform else "未入力"
