@@ -146,11 +146,8 @@ class FormView(discord.ui.View):
             select.callback = self._on_role_select
             self.add_item(select)
 
-            selected_label = " / ".join(
-                f"{ROLE_EMOJIS.get(r, '')} {r}" for r in pending_roles
-            ) if pending_roles else "未選択"
             next_btn = discord.ui.Button(
-                label=f"次へ → 選択中: {selected_label}",
+                label="次へ",
                 style=discord.ButtonStyle.success if pending_roles else discord.ButtonStyle.secondary,
                 disabled=not pending_roles,
                 row=1,
