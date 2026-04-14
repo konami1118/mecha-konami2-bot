@@ -16,11 +16,6 @@ PLATFORM_EMOJIS = {
     "CS": "<:p_playstation:962735784073502730>",
 }
 
-PLATFORM_VALUE_EMOJIS = {
-    "PC": "<:p_pc:962736429333643334>",
-    "CS": "<:p_playstation:962735784073502730>",
-}
-
 RANK_EMOJIS = {
     "未プレイ":        "",
     "ブロンズ":        "<:r1_Bronze:1274396477787078666>",
@@ -179,7 +174,7 @@ class FormView(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
             return
-        await interaction.response.send_modal(CommentModal(self.user_id, self.guests, self.start_interaction, self.event_type))
+        await interaction.response.send_modal(CommentModal(self.user_id, self.start_interaction, self.event_type))
 
     async def _skip_comment(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id:
@@ -247,17 +242,6 @@ class FormView(discord.ui.View):
             await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
             return
         roles = interaction.data["values"]
-        value = "/".join(roles)
-        await self._advance(interaction, value)
-
-    async def _on_role_confirm(self, interaction: discord.Interaction):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
-            return
-        roles = self._pending.get("main_role", {}).get("values", [])
-        if not roles:
-            await interaction.response.send_message("ロールを選択してください。", ephemeral=True)
-            return
         value = "/".join(roles)
         await self._advance(interaction, value)
 

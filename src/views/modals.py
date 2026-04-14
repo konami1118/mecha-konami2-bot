@@ -63,10 +63,9 @@ class CommentModal(discord.ui.Modal, title="コメントを入力してくださ
         required=True,
     )
 
-    def __init__(self, user_id: int, guests: list[str], start_interaction: discord.Interaction = None, event_type: str = "custom"):
+    def __init__(self, user_id: int, start_interaction: discord.Interaction = None, event_type: str = "custom"):
         super().__init__()
         self.user_id = user_id
-        self.guests = guests
         self.start_interaction = start_interaction
         self.event_type = event_type
 
