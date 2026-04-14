@@ -29,7 +29,7 @@ HEADERS = [
 
 def _get_sheet(thread_name: str) -> gspread.Worksheet:
     print(f"[Sheets] 認証中...")
-    creds, _ = google.auth.default(scopes=SCOPES)
+    creds, _ = google.auth.default()
     gc = gspread.authorize(creds)
     print(f"[Sheets] スプレッドシートを開く: {config.SPREADSHEET_ID}")
     spreadsheet = gc.open_by_key(config.SPREADSHEET_ID)
