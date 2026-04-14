@@ -79,7 +79,7 @@ class CommentModal(discord.ui.Modal, title="コメントを入力してくださ
         session.answer(step_key, self.comment.value.strip())
         session.advance()
 
-        await interaction.response.edit_message(content="✅ 応募が完了しました！", view=None)
+        await interaction.response.edit_message(content="⏳ 処理中...", view=None)
         try:
             from src.handlers.submit import handle_submit
             msg = await handle_submit(interaction, session, event_type=self.event_type)
@@ -87,7 +87,9 @@ class CommentModal(discord.ui.Modal, title="コメントを入力してくださ
                 jump_url = f"https://discord.com/channels/{interaction.guild_id}/{interaction.channel_id}/{msg.id}"
                 jump_view = discord.ui.View()
                 jump_view.add_item(discord.ui.Button(label="📋 応募内容を確認する", url=jump_url))
-                await interaction.followup.send("応募が完了しました。", view=jump_view, ephemeral=True)
+                await interaction.edit_original_response(content="✅ 応募が完了しました！", view=jump_view)
+            else:
+                await interaction.edit_original_response(content="✅ 応募が完了しました！")
         except Exception as e:
             import traceback
             print(f"[ERROR] handle_submit エラー: {e}")
