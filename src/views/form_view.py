@@ -11,6 +11,29 @@ from src.forms.steps import (
 from src.forms.session import store
 from src.views.modals import BattletagModal, CommentModal
 
+PLATFORM_EMOJIS = {
+    "PC": "<:p_pc:962736429333643334>",
+    "CS": "<:p_playstation:962735784073502730>",
+}
+
+RANK_EMOJIS = {
+    "未プレイ":        "",
+    "ブロンズ":        "<:r1_Bronze:1274396477787078666>",
+    "シルバー":        "<:r2_Silver:1274397237853683773>",
+    "ゴールド":        "<:r3_Gold:1274397269793443870>",
+    "プラチナ":        "<:r4_Platinum:1274397326760476753>",
+    "ダイヤ":          "<:r5_Diamond:1274397378081984532>",
+    "マスター":        "<:r6_Master:1274397457035563192>",
+    "グランドマスター": "<:r7_Grandmaster:1274397509267099649>",
+    "チャンピオン":    "<:r8_Champions:1209154735614201866>",
+}
+
+ROLE_EMOJIS = {
+    "タンク":   "<:tank:1428669383944830976>",
+    "ダメージ": "<:damage:1428669635150086214>",
+    "サポート": "<:support:1428669965611044927>",
+}
+
 
 class FormView(discord.ui.View):
     def __init__(self, user_id: int, guests: list[str], event_type: str = "custom", start_interaction: discord.Interaction = None):
@@ -49,7 +72,13 @@ class FormView(discord.ui.View):
         elif step_key == "platform":
             select = discord.ui.Select(
                 placeholder="プラットフォームを選択してください",
-                options=[discord.SelectOption(label=p, value=p) for p in PLATFORMS],
+                options=[
+                    discord.SelectOption(
+                        label=p,
+                        value=p,
+                        emoji=PLATFORM_EMOJIS.get(p)
+                    ) for p in PLATFORMS
+                ],
                 custom_id="platform_select",
                 row=0,
             )
@@ -62,7 +91,12 @@ class FormView(discord.ui.View):
             selected_div = pending.get("div")
 
             tier_options = [
-                discord.SelectOption(label=r, value=r, default=(r == selected_tier))
+                discord.SelectOption(
+                    label=r,
+                    value=r,
+                    default=(r == selected_tier),
+                    emoji=RANK_EMOJIS.get(r) or None
+                )
                 for r in RANK_TIERS
             ]
             tier_select = discord.ui.Select(
@@ -90,7 +124,13 @@ class FormView(discord.ui.View):
         elif step_key == "main_role":
             select = discord.ui.Select(
                 placeholder="メインロールを選択してください（複数選択可）",
-                options=[discord.SelectOption(label=r, value=r) for r in MAIN_ROLES],
+                options=[
+                    discord.SelectOption(
+                        label=r,
+                        value=r,
+                        emoji=ROLE_EMOJIS.get(r)
+                    ) for r in MAIN_ROLES
+                ],
                 custom_id="main_role_select",
                 min_values=1,
                 max_values=len(MAIN_ROLES),
