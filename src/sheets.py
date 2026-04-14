@@ -19,7 +19,7 @@ _cached_creds: Credentials = None
 
 def _get_sheets_credentials() -> Credentials:
     global _cached_creds
-    if _cached_creds and _cached_creds.valid:
+    if _cached_creds is not None:
         return _cached_creds
     client = secretmanager.SecretManagerServiceClient()
     name = f"projects/{_PROJECT_ID}/secrets/SHEETS_SERVICE_ACCOUNT_KEY/versions/latest"
