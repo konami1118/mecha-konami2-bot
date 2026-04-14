@@ -102,10 +102,6 @@ async def apply_open(interaction: discord.Interaction):
         await interaction.followup.send("このコマンドはスレッド内でのみ使用できます。", ephemeral=True)
         return
 
-    if thread.id in active_views:
-        await interaction.followup.send("このスレッドはすでに受付中です。締め切る場合は `/apply_close` を使用してください。", ephemeral=True)
-        return
-
     guests, event_type = extract_guests_from_title(thread.name)
     if not guests:
         await interaction.followup.send(
