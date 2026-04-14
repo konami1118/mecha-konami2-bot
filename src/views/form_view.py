@@ -89,12 +89,14 @@ class FormView(discord.ui.View):
 
         elif step_key == "main_role":
             select = discord.ui.Select(
-                placeholder="メインロールを選択してください",
+                placeholder="メインロールを選択してください（複数選択可）",
                 options=[discord.SelectOption(label=r, value=r) for r in MAIN_ROLES],
                 custom_id="main_role_select",
+                min_values=1,
+                max_values=len(MAIN_ROLES),
                 row=0,
             )
-            select.callback = self._on_select
+            select.callback = self._on_multi_select
             self.add_item(select)
 
         elif step_key == "preferred_guest":
@@ -192,6 +194,13 @@ class FormView(discord.ui.View):
             await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
             return
         await self._advance(interaction, interaction.data["values"][0])
+
+    async def _on_multi_select(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
+            return
+        value = "/".join(interaction.data["values"])
+        await self._advance(interaction, value)
 
     async def _advance(self, interaction: discord.Interaction, value: str):
         session = store.get(self.user_id)

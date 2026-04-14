@@ -13,7 +13,7 @@ RANK_TIERS = [
 # ランクディビジョン（数字, 1最上段）
 RANK_DIVISIONS = ["1", "2", "3", "4", "5"]
 
-MAIN_ROLES = ["タンク", "ダメージ", "サポート", "なんでも"]
+MAIN_ROLES = ["タンク", "ダメージ", "サポート"]
 
 PLATFORMS = ["PC", "CS"]
 
