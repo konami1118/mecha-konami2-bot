@@ -127,13 +127,15 @@ class FormView(discord.ui.View):
             self.add_item(div_select)
 
         elif step_key == "main_role":
+            pending_roles = self._pending.get("main_role", {}).get("values", [])
             select = discord.ui.Select(
                 placeholder="メインロールを選択してください（複数選択可）",
                 options=[
                     discord.SelectOption(
                         label=r,
                         value=r,
-                        emoji=ROLE_EMOJIS.get(r)
+                        emoji=ROLE_EMOJIS.get(r),
+                        default=(r in pending_roles),
                     ) for r in MAIN_ROLES
                 ],
                 custom_id="main_role_select",
@@ -141,8 +143,20 @@ class FormView(discord.ui.View):
                 max_values=len(MAIN_ROLES),
                 row=0,
             )
-            select.callback = self._on_multi_select
+            select.callback = self._on_role_select
             self.add_item(select)
+
+            selected_label = " / ".join(
+                f"{ROLE_EMOJIS.get(r, '')} {r}" for r in pending_roles
+            ) if pending_roles else "未選択"
+            next_btn = discord.ui.Button(
+                label=f"次へ → 選択中: {selected_label}",
+                style=discord.ButtonStyle.success if pending_roles else discord.ButtonStyle.secondary,
+                disabled=not pending_roles,
+                row=1,
+            )
+            next_btn.callback = self._on_role_confirm
+            self.add_item(next_btn)
 
         elif step_key == "preferred_guest":
             options = [discord.SelectOption(label=g, value=g) for g in self.guests]
@@ -240,11 +254,23 @@ class FormView(discord.ui.View):
             return
         await self._advance(interaction, interaction.data["values"][0])
 
-    async def _on_multi_select(self, interaction: discord.Interaction):
+    async def _on_role_select(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
             return
-        value = "/".join(interaction.data["values"])
+        self._pending["main_role"] = {"values": interaction.data["values"]}
+        self._build()
+        await interaction.response.edit_message(content=self.current_prompt(), view=self)
+
+    async def _on_role_confirm(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
+            return
+        roles = self._pending.get("main_role", {}).get("values", [])
+        if not roles:
+            await interaction.response.send_message("ロールを選択してください。", ephemeral=True)
+            return
+        value = "/".join(roles)
         await self._advance(interaction, value)
 
     async def _advance(self, interaction: discord.Interaction, value: str):
