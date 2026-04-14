@@ -215,5 +215,12 @@ class FormView(discord.ui.View):
                 view=self,
             )
 
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item):
+        import traceback
+        print(f"[ERROR] FormView エラー: {error}")
+        traceback.print_exc()
+        if not interaction.response.is_done():
+            await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
+
     async def on_timeout(self):
         store.delete(self.user_id)

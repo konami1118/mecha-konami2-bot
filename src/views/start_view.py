@@ -26,6 +26,13 @@ class StartView(discord.ui.View):
         btn.callback = self._on_click
         self.add_item(btn)
 
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item):
+        import traceback
+        print(f"[ERROR] StartView エラー: {error}")
+        traceback.print_exc()
+        if not interaction.response.is_done():
+            await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
+
     async def _on_click(self, interaction: discord.Interaction):
         user_id = interaction.user.id
         thread_id = interaction.channel_id
