@@ -263,7 +263,9 @@ class FormView(discord.ui.View):
                 msg = await handle_submit(interaction, session, event_type=self.event_type)
                 if msg:
                     jump_url = f"https://discord.com/channels/{interaction.guild_id}/{interaction.channel_id}/{msg.id}"
-                    await interaction.followup.send(f"[📋 応募内容を確認する]({jump_url})", ephemeral=True)
+                    jump_view = discord.ui.View()
+                    jump_view.add_item(discord.ui.Button(label="📋 応募内容を確認する", url=jump_url))
+                    await interaction.followup.send("応募が完了しました。", view=jump_view, ephemeral=True)
             except Exception as e:
                 import traceback
                 print(f"[ERROR] handle_submit エラー: {e}")
