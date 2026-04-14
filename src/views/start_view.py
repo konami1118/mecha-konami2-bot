@@ -26,12 +26,25 @@ class StartView(discord.ui.View):
         btn.callback = self._on_click
         self.add_item(btn)
 
+        if is_open:
+            reset_btn = discord.ui.Button(
+                label="リセット",
+                style=discord.ButtonStyle.secondary,
+                custom_id="apply_reset",
+            )
+            reset_btn.callback = self._on_reset
+            self.add_item(reset_btn)
+
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item):
         import traceback
         print(f"[ERROR] StartView エラー: {error}")
         traceback.print_exc()
         if not interaction.response.is_done():
             await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
+
+    async def _on_reset(self, interaction: discord.Interaction):
+        store.delete(interaction.user.id)
+        await interaction.response.send_message("応募状態をリセットしました。再度「応募する」を押してください。", ephemeral=True)
 
     async def _on_click(self, interaction: discord.Interaction):
         from src.utils import extract_guests_from_title
