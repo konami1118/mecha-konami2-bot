@@ -58,4 +58,5 @@ async def handle_submit(interaction: discord.Interaction, session: Session, even
 
     submissions[user_id_str] = {"message_id": msg.id, "answers": session.answers}
     _save_submissions(thread_id, submissions)
+    print(f"[SUBMIT] {user} ({user.id}) が応募完了 / スレッド: {thread.name} / 回答: {session.answers}")
     await asyncio.to_thread(upsert_participant, user.id, user.display_name, str(user), session.answers, thread_name=thread.name)

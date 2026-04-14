@@ -44,6 +44,7 @@ class StartView(discord.ui.View):
 
     async def _on_reset(self, interaction: discord.Interaction):
         store.delete(interaction.user.id)
+        print(f"[RESET] {interaction.user} ({interaction.user.id}) がセッションをリセット / スレッド: {interaction.channel.name}")
         await interaction.response.send_message("応募状態をリセットしました。再度「応募する」を押してください。", ephemeral=True)
 
     async def _on_click(self, interaction: discord.Interaction):
@@ -71,6 +72,7 @@ class StartView(discord.ui.View):
                 return
 
         store.create(user_id, thread_id)
+        print(f"[START] {interaction.user} ({interaction.user.id}) が応募を開始 / スレッド: {thread.name} / イベント: {event_type}")
 
         view = FormView(user_id, guests, event_type=event_type, start_interaction=interaction)
         await interaction.response.send_message(

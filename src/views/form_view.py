@@ -193,6 +193,7 @@ class FormView(discord.ui.View):
             await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
             return
         store.delete(self.user_id)
+        print(f"[CANCEL] {interaction.user} ({interaction.user.id}) が応募をキャンセル")
         await interaction.response.edit_message(content="応募をキャンセルしました。", view=None)
 
     async def _on_rank_partial(self, interaction: discord.Interaction):
