@@ -5,11 +5,22 @@ Google Sheets への参加者データ書き込み
 - ユーザーIDをキーとしてupsert
 """
 
+import json
 import gspread
-import google.auth
+from google.cloud import secretmanager
+from google.oauth2.service_account import Credentials
 import config
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+_PROJECT_ID = "ow-discord-event-support-bot"
+
+
+def _get_sheets_credentials() -> Credentials:
+    client = secretmanager.SecretManagerServiceClient()
+    name = f"projects/{_PROJECT_ID}/secrets/SHEETS_SERVICE_ACCOUNT_KEY/versions/latest"
+    response = client.access_secret_version(request={"name": name})
+    key_info = json.loads(response.payload.data.decode("UTF-8"))
+    return Credentials.from_service_account_info(key_info, scopes=SCOPES)
 
 # ヘッダー行
 HEADERS = [
@@ -29,7 +40,7 @@ HEADERS = [
 
 def _get_sheet(thread_name: str) -> gspread.Worksheet:
     print(f"[Sheets] 認証中...")
-    creds, _ = google.auth.default()
+    creds = _get_sheets_credentials()
     gc = gspread.authorize(creds)
     print(f"[Sheets] スプレッドシートを開く: {config.SPREADSHEET_ID}")
     spreadsheet = gc.open_by_key(config.SPREADSHEET_ID)
