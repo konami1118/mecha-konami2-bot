@@ -44,13 +44,20 @@ class StartView(discord.ui.View):
         user_id = interaction.user.id
         thread_id = interaction.channel_id
 
-        # 別スレッドのセッションが残っていたらリセット
         existing = store.get(user_id)
-        if existing and existing.thread_id != thread_id:
-            store.delete(user_id)
+        if existing:
+            if existing.thread_id != thread_id:
+                # 別スレッドのセッションが残っていたらリセット
+                store.delete(user_id)
+            else:
+                # 同じスレッドで既に応募中
+                await interaction.response.send_message(
+                    "すでに応募フォームが開いています。既存のフォームを完了するかキャンセルしてください。",
+                    ephemeral=True
+                )
+                return
 
-        if not store.has_active(user_id):
-            store.create(user_id, thread_id)
+        store.create(user_id, thread_id)
 
         view = FormView(user_id, guests, event_type=event_type, start_interaction=interaction)
         await interaction.response.send_message(
