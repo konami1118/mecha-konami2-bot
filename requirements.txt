@@ -1,0 +1,5 @@
+discord.py>=2.0
+python-dotenv>=0.19
+gspread>=6.0
+google-auth>=2.0
+google-cloud-secret-manager>=2.0

@@ -1,0 +1,20 @@
+# 秘密情報
+.env
+key/
+
+# 応募データ（個人情報含む）
+data/
+
+# ログ
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db

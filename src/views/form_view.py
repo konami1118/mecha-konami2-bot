@@ -1,0 +1,219 @@
+# -*- coding: utf-8 -*-
+"""
+回答フォームのステップ制御View
+各ステップに応じてセレクトメニュー / モーダル起動ボタンを切り替える
+"""
+
+import discord
+from src.forms.steps import (
+    STEPS, STEP_LABELS, RANK_TIERS, RANK_DIVISIONS, MAIN_ROLES, RANK_STEPS, PLATFORMS,
+)
+from src.forms.session import store
+from src.views.modals import BattletagModal, CommentModal
+
+
+class FormView(discord.ui.View):
+    def __init__(self, user_id: int, guests: list[str], event_type: str = "custom", start_interaction: discord.Interaction = None):
+        super().__init__(timeout=900)
+        self.user_id = user_id
+        self.guests = guests
+        self.event_type = event_type
+        self.start_interaction = start_interaction
+        # ランクステップの途中選択状態 { step_key: {"tier": str, "div": str} }
+        self._pending: dict[str, dict] = {}
+        self._build()
+
+    def current_prompt(self) -> str:
+        session = store.get(self.user_id)
+        if not session:
+            return "セッションが切れました。最初からやり直してください。"
+        step_key = STEPS[session.current_step]
+        label = STEP_LABELS[step_key]
+        if step_key == "preferred_guest" and self.event_type == "coaching":
+            label = "コーチングしてもらいたいゲスト"
+        return f"**【{session.current_step + 1}/{len(STEPS)}】{label}** を選択してください。"
+
+    def _build(self):
+        self.clear_items()
+        session = store.get(self.user_id)
+        if not session:
+            return
+
+        step_key = STEPS[session.current_step]
+
+        if step_key == "battletag":
+            btn = discord.ui.Button(label="バトルタグを入力する", style=discord.ButtonStyle.primary, row=0)
+            btn.callback = self._open_battletag_modal
+            self.add_item(btn)
+
+        elif step_key == "platform":
+            select = discord.ui.Select(
+                placeholder="プラットフォームを選択してください",
+                options=[discord.SelectOption(label=p, value=p) for p in PLATFORMS],
+                custom_id="platform_select",
+                row=0,
+            )
+            select.callback = self._on_select
+            self.add_item(select)
+
+        elif step_key in RANK_STEPS:
+            pending = self._pending.get(step_key, {})
+            selected_tier = pending.get("tier")
+            selected_div = pending.get("div")
+
+            tier_options = [
+                discord.SelectOption(label=r, value=r, default=(r == selected_tier))
+                for r in RANK_TIERS
+            ]
+            tier_select = discord.ui.Select(
+                placeholder="ランクを選択（未プレイ / ブロンズ〜チャンピオン）",
+                options=tier_options,
+                custom_id=f"tier_{step_key}",
+                row=0,
+            )
+            tier_select.callback = self._on_rank_partial
+            self.add_item(tier_select)
+
+            div_options = [
+                discord.SelectOption(label=d, value=d, default=(d == selected_div))
+                for d in RANK_DIVISIONS
+            ]
+            div_select = discord.ui.Select(
+                placeholder="ティアを選択（1〜5）",
+                options=div_options,
+                custom_id=f"div_{step_key}",
+                row=1,
+            )
+            div_select.callback = self._on_rank_partial
+            self.add_item(div_select)
+
+        elif step_key == "main_role":
+            select = discord.ui.Select(
+                placeholder="メインロールを選択してください",
+                options=[discord.SelectOption(label=r, value=r) for r in MAIN_ROLES],
+                custom_id="main_role_select",
+                row=0,
+            )
+            select.callback = self._on_select
+            self.add_item(select)
+
+        elif step_key == "preferred_guest":
+            options = [discord.SelectOption(label=g, value=g) for g in self.guests]
+            options.append(discord.SelectOption(label="どちらでもOK", value="どちらでもOK"))
+            if self.event_type == "coaching":
+                placeholder = "コーチングしてもらいたいゲストを選択してください"
+            else:
+                placeholder = "一緒に戦いたいゲストを選択してください"
+            select = discord.ui.Select(
+                placeholder=placeholder,
+                options=options,
+                custom_id="guest_select",
+                row=0,
+            )
+            select.callback = self._on_select
+            self.add_item(select)
+
+        elif step_key == "comment":
+            btn_input = discord.ui.Button(label="コメントを入力する", style=discord.ButtonStyle.primary, row=0)
+            btn_input.callback = self._open_comment_modal
+            self.add_item(btn_input)
+            btn_skip = discord.ui.Button(label="スキップ", style=discord.ButtonStyle.secondary, row=0)
+            btn_skip.callback = self._skip_comment
+            self.add_item(btn_skip)
+
+        # キャンセルボタン（常に表示）
+        cancel_btn = discord.ui.Button(label="キャンセル", style=discord.ButtonStyle.danger, row=4)
+        cancel_btn.callback = self._on_cancel
+        self.add_item(cancel_btn)
+
+    async def _open_comment_modal(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
+            return
+        await interaction.response.send_modal(CommentModal(self.user_id, self.guests, self.start_interaction, self.event_type))
+
+    async def _skip_comment(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
+            return
+        await self._advance(interaction, "")
+
+    async def _open_battletag_modal(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
+            return
+        await interaction.response.send_modal(BattletagModal(self.user_id, self.guests, event_type=self.event_type, start_interaction=self.start_interaction))
+
+    async def _on_cancel(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
+            return
+        store.delete(self.user_id)
+        await interaction.response.edit_message(content="応募をキャンセルしました。", view=None)
+
+    async def _on_rank_partial(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
+            return
+
+        session = store.get(self.user_id)
+        if not session:
+            await interaction.response.send_message("セッションが切れました。最初からやり直してください。", ephemeral=True)
+            return
+
+        step_key = STEPS[session.current_step]
+        if step_key not in self._pending:
+            self._pending[step_key] = {}
+
+        custom_id = interaction.data["custom_id"]
+        value = interaction.data["values"][0]
+
+        if custom_id.startswith("tier_"):
+            self._pending[step_key]["tier"] = value
+            if value == "未プレイ":
+                # 未プレイはディビジョン不要 → そのまま確定
+                await self._advance(interaction, "未プレイ")
+                return
+        elif custom_id.startswith("div_"):
+            self._pending[step_key]["div"] = value
+
+        pending = self._pending[step_key]
+
+        # ランク・ティア両方揃ったら確定
+        if "tier" in pending and "div" in pending:
+            combined = pending["tier"] + pending["div"]
+            await self._advance(interaction, combined)
+        else:
+            # 片方だけ → 再描画せず静かに受け取る
+            await interaction.response.defer()
+
+    async def _on_select(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの応募フォームではありません。", ephemeral=True)
+            return
+        await self._advance(interaction, interaction.data["values"][0])
+
+    async def _advance(self, interaction: discord.Interaction, value: str):
+        session = store.get(self.user_id)
+        if not session:
+            await interaction.response.send_message("セッションが切れました。最初からやり直してください。", ephemeral=True)
+            return
+
+        step_key = STEPS[session.current_step]
+        session.answer(step_key, value)
+        session.advance()
+
+        if session.current_step >= len(STEPS):
+            from src.handlers.submit import handle_submit
+            await interaction.response.edit_message(content="✅ 応募が完了しました！", view=None)
+            await handle_submit(interaction, session, event_type=self.event_type)
+            store.delete(self.user_id)
+        else:
+            self._build()
+            await interaction.response.edit_message(
+                content=self.current_prompt(),
+                view=self,
+            )
+
+    async def on_timeout(self):
+        store.delete(self.user_id)
