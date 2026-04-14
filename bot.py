@@ -119,10 +119,15 @@ async def apply_open(interaction: discord.Interaction):
     active_views[thread.id] = view
 
     event_label = "コーチングイベント" if event_type == "coaching" else "対抗カスタム"
+    embed = discord.Embed(
+        title="📢 応募受付を開始しました！",
+        color=discord.Color.blurple()
+    )
+    embed.add_field(name="イベント", value=event_label, inline=True)
+    embed.add_field(name="ゲスト", value=" / ".join(guests), inline=True)
+    embed.set_footer(text="下のボタンから応募してください。")
     msg = await interaction.followup.send(
-        f"**📢 応募受付を開始しました！**\n"
-        f"イベント: **{event_label}** ／ ゲスト: **{' / '.join(guests)}**\n\n"
-        f"下のボタンから応募してください。",
+        embed=embed,
         view=view,
         wait=True
     )
