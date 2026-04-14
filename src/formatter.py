@@ -13,6 +13,26 @@ EMOJI_SUPPORT = "<:support:1428669965611044927>"
 EMOJI_PLATFORM = "<:p_pc:962736429333643334>"
 EMOJI_GUEST  = "<:e_sportsmanship:962725420887859301>"
 
+RANK_EMOJIS = {
+    "ブロンズ":       "<:r1_Bronze:1274396477787078666>",
+    "シルバー":       "<:r2_Silver:1274397237853683773>",
+    "ゴールド":       "<:r3_Gold:1274397269793443870>",
+    "プラチナ":       "<:r4_Platinum:1274397326760476753>",
+    "ダイヤ":         "<:r5_Diamond:1274397378081984532>",
+    "マスター":       "<:r6_Master:1274397457035563192>",
+    "グランドマスター": "<:r7_Grandmaster:1274397509267099649>",
+    "チャンピオン":    "<:r8_Champions:1209154735614201866>",
+}
+
+
+def _rank_with_emoji(rank: str) -> str:
+    if not rank or rank == "未プレイ":
+        return rank or "未入力"
+    for tier, emoji in RANK_EMOJIS.items():
+        if tier in rank:
+            return f"{emoji} {rank}"
+    return rank
+
 
 def build_submission_embed(user: discord.Member, answers: dict, event_type: str = "custom") -> discord.Embed:
     embed = discord.Embed(
@@ -23,9 +43,9 @@ def build_submission_embed(user: discord.Member, answers: dict, event_type: str 
 
     embed.add_field(name="バトルタグ", value=answers.get("battletag", "未入力"), inline=False)
     embed.add_field(name=f"{EMOJI_PLATFORM} プラットフォーム", value=answers.get("platform", "未入力"), inline=False)
-    embed.add_field(name=f"{EMOJI_TANK} タンク最高ランク", value=answers.get("tank_rank", "未入力"), inline=True)
-    embed.add_field(name=f"{EMOJI_DAMAGE} ダメージ最高ランク", value=answers.get("dps_rank", "未入力"), inline=True)
-    embed.add_field(name=f"{EMOJI_SUPPORT} サポート最高ランク", value=answers.get("support_rank", "未入力"), inline=True)
+    embed.add_field(name=f"{EMOJI_TANK} タンク最高ランク", value=_rank_with_emoji(answers.get("tank_rank", "")), inline=True)
+    embed.add_field(name=f"{EMOJI_DAMAGE} ダメージ最高ランク", value=_rank_with_emoji(answers.get("dps_rank", "")), inline=True)
+    embed.add_field(name=f"{EMOJI_SUPPORT} サポート最高ランク", value=_rank_with_emoji(answers.get("support_rank", "")), inline=True)
     embed.add_field(name="メインロール", value=answers.get("main_role", "未入力"), inline=True)
     guest_label = f"{EMOJI_GUEST} コーチングしてもらいたいゲスト" if event_type == "coaching" else f"{EMOJI_GUEST} 一緒に戦いたいゲスト"
     embed.add_field(name=guest_label, value=answers.get("preferred_guest", "未入力"), inline=True)
