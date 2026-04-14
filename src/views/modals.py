@@ -81,6 +81,12 @@ class CommentModal(discord.ui.Modal, title="コメントを入力してくださ
         session.advance()
 
         await interaction.response.edit_message(content="✅ 応募が完了しました！", view=None)
-        from src.handlers.submit import handle_submit
-        await handle_submit(interaction, session, event_type=self.event_type)
-        store.delete(self.user_id)
+        try:
+            from src.handlers.submit import handle_submit
+            await handle_submit(interaction, session, event_type=self.event_type)
+        except Exception as e:
+            import traceback
+            print(f"[ERROR] handle_submit エラー: {e}")
+            traceback.print_exc()
+        finally:
+            store.delete(self.user_id)

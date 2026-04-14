@@ -14,14 +14,19 @@ import config
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 _PROJECT_ID = "ow-discord-event-support-bot"
+_cached_creds: Credentials = None
 
 
 def _get_sheets_credentials() -> Credentials:
+    global _cached_creds
+    if _cached_creds and _cached_creds.valid:
+        return _cached_creds
     client = secretmanager.SecretManagerServiceClient()
     name = f"projects/{_PROJECT_ID}/secrets/SHEETS_SERVICE_ACCOUNT_KEY/versions/latest"
     response = client.access_secret_version(request={"name": name})
     key_info = json.loads(response.payload.data.decode("UTF-8"))
-    return Credentials.from_service_account_info(key_info, scopes=SCOPES)
+    _cached_creds = Credentials.from_service_account_info(key_info, scopes=SCOPES)
+    return _cached_creds
 
 # ヘッダー行
 HEADERS = [

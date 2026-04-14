@@ -34,14 +34,25 @@ class StartView(discord.ui.View):
             await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
 
     async def _on_click(self, interaction: discord.Interaction):
+        from src.utils import extract_guests_from_title
+        thread = interaction.channel
+        guests, event_type = extract_guests_from_title(thread.name)
+        if not guests:
+            await interaction.response.send_message("スレッド情報を取得できませんでした。管理者にお知らせください。", ephemeral=True)
+            return
+
         user_id = interaction.user.id
         thread_id = interaction.channel_id
 
-        # セッションが残っていれば途中から再開、なければ新規作成
+        # 別スレッドのセッションが残っていたらリセット
+        existing = store.get(user_id)
+        if existing and existing.thread_id != thread_id:
+            store.delete(user_id)
+
         if not store.has_active(user_id):
             store.create(user_id, thread_id)
 
-        view = FormView(user_id, self.guests, event_type=self.event_type, start_interaction=interaction)
+        view = FormView(user_id, guests, event_type=event_type, start_interaction=interaction)
         await interaction.response.send_message(
             view.current_prompt(),
             view=view,

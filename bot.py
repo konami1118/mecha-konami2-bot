@@ -7,6 +7,8 @@
   /apply_close  - 応募受付を締め切る（管理者ロール限定）
 """
 
+import json
+import os
 import discord
 from discord import app_commands
 import config
@@ -23,6 +25,29 @@ tree = app_commands.CommandTree(bot)
 active_views: dict[int, StartView] = {}
 # スレッドID → 応募メッセージID のマッピング
 apply_messages: dict[int, int] = {}
+
+APPLY_STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "apply_state.json")
+
+
+def _load_apply_state():
+    if os.path.exists(APPLY_STATE_FILE):
+        with open(APPLY_STATE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def _save_apply_state():
+    os.makedirs(os.path.dirname(APPLY_STATE_FILE), exist_ok=True)
+    state = {
+        str(tid): {
+            "msg_id": apply_messages[tid],
+            "guests": active_views[tid].guests,
+            "event_type": active_views[tid].event_type,
+        }
+        for tid in active_views if tid in apply_messages
+    }
+    with open(APPLY_STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False)
 
 
 def _is_admin(interaction: discord.Interaction) -> bool:
@@ -45,6 +70,17 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
 
 @bot.event
 async def on_ready():
+    # 永続ビューを登録（再起動後も応募ボタンが動くように）
+    bot.add_view(StartView(guests=[], event_type="custom", is_open=True))
+
+    # apply状態を復元
+    state = _load_apply_state()
+    for tid_str, info in state.items():
+        tid = int(tid_str)
+        view = StartView(guests=info["guests"], event_type=info["event_type"], is_open=True)
+        active_views[tid] = view
+        apply_messages[tid] = info["msg_id"]
+
     await tree.sync(guild=discord.Object(id=config.SERVER_ID))
     print(f"Bot起動: {bot.user}")
 
@@ -87,6 +123,7 @@ async def apply_open(interaction: discord.Interaction):
         wait=True
     )
     apply_messages[thread.id] = msg.id
+    _save_apply_state()
 
 
 @tree.command(
@@ -121,6 +158,8 @@ async def apply_close(interaction: discord.Interaction):
         pass
 
     active_views.pop(thread.id, None)
+    apply_messages.pop(thread.id, None)
+    _save_apply_state()
     await interaction.followup.send("**📪 応募受付を締め切りました。**")
 
 

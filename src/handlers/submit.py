@@ -6,6 +6,7 @@
 - interaction への応答は呼び出し元が行う
 """
 
+import asyncio
 import json
 import os
 import discord
@@ -57,4 +58,4 @@ async def handle_submit(interaction: discord.Interaction, session: Session, even
 
     submissions[user_id_str] = {"message_id": msg.id, "answers": session.answers}
     _save_submissions(thread_id, submissions)
-    upsert_participant(user.id, user.display_name, str(user), session.answers, thread_name=thread.name)
+    await asyncio.to_thread(upsert_participant, user.id, user.display_name, str(user), session.answers, thread_name=thread.name)
