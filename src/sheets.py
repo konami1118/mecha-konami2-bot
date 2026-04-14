@@ -6,6 +6,7 @@ Google Sheets への参加者データ書き込み
 """
 
 import json
+from datetime import datetime, timezone, timedelta
 import gspread
 from google.cloud import secretmanager
 from google.oauth2.service_account import Credentials
@@ -24,6 +25,7 @@ def _get_sheets_credentials() -> Credentials:
 
 # ヘッダー行
 HEADERS = [
+    "回答日時",
     "ユーザーname",
     "DiscordID",
     "ユーザーID",
@@ -65,7 +67,11 @@ def upsert_participant(user_id: int, display_name: str, discord_name: str, answe
     print(f"[Sheets] upsert_participant 開始: user_id={user_id}, thread={thread_name}")
     sheet = _get_sheet(thread_name)
 
+    jst = timezone(timedelta(hours=9))
+    now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
+
     row_data = [
+        now,
         display_name,
         discord_name,
         str(user_id),
@@ -79,12 +85,12 @@ def upsert_participant(user_id: int, display_name: str, discord_name: str, answe
         answers.get("comment", ""),
     ]
 
-    col_c = sheet.col_values(3)
+    col_d = sheet.col_values(4)
     user_id_str = str(user_id)
 
-    if user_id_str in col_c:
-        row_index = col_c.index(user_id_str) + 1
-        sheet.update(f"A{row_index}:K{row_index}", [row_data])
+    if user_id_str in col_d:
+        row_index = col_d.index(user_id_str) + 1
+        sheet.update(f"A{row_index}:L{row_index}", [row_data])
         print(f"[Sheets] 既存行を更新: row={row_index}")
     else:
         sheet.append_row(row_data)
