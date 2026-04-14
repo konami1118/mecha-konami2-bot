@@ -34,6 +34,15 @@ def _is_admin(interaction: discord.Interaction) -> bool:
     return False
 
 
+@tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    import traceback
+    print(f"[ERROR] コマンドエラー: {error}")
+    traceback.print_exc()
+    if not interaction.response.is_done():
+        await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
+
+
 @bot.event
 async def on_ready():
     await tree.sync(guild=discord.Object(id=config.SERVER_ID))
