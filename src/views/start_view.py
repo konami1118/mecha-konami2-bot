@@ -118,18 +118,21 @@ class _CancelConfirmView(discord.ui.View):
         self.add_item(cancel_btn)
 
     async def _on_confirm(self, interaction: discord.Interaction):
+        print(f"[CONFIRM] {interaction.user} ({interaction.user.id}) が「はい、取り消す」を押した")
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("これはあなたの操作ではありません。", ephemeral=True)
             return
         await self._do_cancel(interaction)
 
     async def _on_cancel(self, interaction: discord.Interaction):
+        print(f"[CANCEL_BTN] {interaction.user} ({interaction.user.id}) が「キャンセル」を押した")
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("これはあなたの操作ではありません。", ephemeral=True)
             return
         await interaction.response.edit_message(content="取り消しをキャンセルしました。", view=None)
 
     async def _do_cancel(self, interaction: discord.Interaction):
+        print(f"[DO_CANCEL] 取り消し処理開始: user_id={self.user_id}, thread_id={self.thread.id}")
         thread_id = self.thread.id
         store.delete(self.user_id)
 
