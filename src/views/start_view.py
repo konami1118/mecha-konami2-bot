@@ -109,6 +109,26 @@ class _CancelConfirmView(discord.ui.View):
         self.user_id = user_id
         self.thread = thread
 
+        # インスタンスごとにユニークなcustom_idを生成（デコレータはクラス共通IDになるためNG）
+        confirm_btn = discord.ui.Button(label="はい、取り消す", style=discord.ButtonStyle.danger)
+        confirm_btn.callback = self._on_confirm
+        cancel_btn = discord.ui.Button(label="キャンセル", style=discord.ButtonStyle.secondary)
+        cancel_btn.callback = self._on_cancel
+        self.add_item(confirm_btn)
+        self.add_item(cancel_btn)
+
+    async def _on_confirm(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの操作ではありません。", ephemeral=True)
+            return
+        await self._do_cancel(interaction)
+
+    async def _on_cancel(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの操作ではありません。", ephemeral=True)
+            return
+        await interaction.response.edit_message(content="取り消しをキャンセルしました。", view=None)
+
     async def _do_cancel(self, interaction: discord.Interaction):
         thread_id = self.thread.id
         store.delete(self.user_id)
@@ -128,7 +148,6 @@ class _CancelConfirmView(discord.ui.View):
                         await msg.delete()
                     except discord.NotFound:
                         pass
-                # エントリが見つかった場合のみJSONを更新する
                 with open(path, "w", encoding="utf-8") as f:
                     json.dump(submissions, f, ensure_ascii=False, indent=2)
 
@@ -139,25 +158,14 @@ class _CancelConfirmView(discord.ui.View):
         else:
             await interaction.response.edit_message(content="応募データが見つかりませんでした（未応募または取り消し済み）。", view=None)
 
-    @discord.ui.button(label="はい、取り消す", style=discord.ButtonStyle.danger)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("これはあなたの操作ではありません。", ephemeral=True)
-            return
-        await self._do_cancel(interaction)
-
-    @discord.ui.button(label="キャンセル", style=discord.ButtonStyle.secondary)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("これはあなたの操作ではありません。", ephemeral=True)
-            return
-        await interaction.response.edit_message(content="取り消しをキャンセルしました。", view=None)
-
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item):
         import traceback
         print(f"[ERROR] _CancelConfirmView エラー: {error}")
         traceback.print_exc()
-        if not interaction.response.is_done():
-            await interaction.response.edit_message(content="⚠️ エラーが発生しました。もう一度お試しください。", view=None)
-        else:
-            await interaction.edit_original_response(content="⚠️ エラーが発生しました。もう一度お試しください。", view=None)
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.edit_message(content="⚠️ エラーが発生しました。もう一度お試しください。", view=None)
+            else:
+                await interaction.edit_original_response(content="⚠️ エラーが発生しました。もう一度お試しください。", view=None)
+        except discord.HTTPException:
+            pass
