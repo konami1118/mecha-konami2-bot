@@ -107,7 +107,7 @@ def upsert_participant(user_id: int, display_name: str, discord_name: str, answe
             status,
             now,
         ]
-        sheet.update(f"A{row_index}:N{row_index}", [row_data])
+        sheet.update([row_data], f"A{row_index}:N{row_index}")
         print(f"[Sheets] 既存行を更新: row={row_index}, status={status}")
     else:
         row_data = [
@@ -135,20 +135,22 @@ def cancel_participant(user_id: int, thread_name: str):
     print(f"[Sheets] cancel_participant 開始: user_id={user_id}, thread={thread_name}")
     try:
         sheet = _get_sheet(thread_name)
+
+        col_d = sheet.col_values(4)
+        user_id_str = str(user_id)
+
+        if user_id_str not in col_d:
+            print(f"[Sheets] cancel_participant: ユーザーが見つからない (user_id={user_id})")
+            return
+
+        row_index = col_d.index(user_id_str) + 1
+        jst = timezone(timedelta(hours=9))
+        now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
+        # ステータス(M列=13)と最終更新日時(N列=14)を更新
+        sheet.update_cell(row_index, 13, STATUS_CANCELLED)
+        sheet.update_cell(row_index, 14, now)
+        print(f"[Sheets] ステータスを「取り消し済み」に更新: row={row_index}")
     except Exception as e:
-        print(f"[Sheets] cancel_participant: シート取得失敗 ({e})")
-        return
-
-    col_d = sheet.col_values(4)
-    user_id_str = str(user_id)
-
-    if user_id_str not in col_d:
-        print(f"[Sheets] cancel_participant: ユーザーが見つからない (user_id={user_id})")
-        return
-
-    row_index = col_d.index(user_id_str) + 1
-    jst = timezone(timedelta(hours=9))
-    now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
-    # ステータス(M列=13)と最終更新日時(N列=14)をまとめて更新
-    sheet.update(f"M{row_index}:N{row_index}", [[STATUS_CANCELLED, now]])
-    print(f"[Sheets] ステータスを「取り消し済み」に更新: row={row_index}")
+        import traceback
+        print(f"[Sheets] cancel_participant エラー: {e}")
+        traceback.print_exc()
