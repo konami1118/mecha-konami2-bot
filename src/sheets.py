@@ -30,19 +30,26 @@ def _get_sheets_credentials() -> Credentials:
 
 # ヘッダー行
 HEADERS = [
-    "回答日時",
-    "ユーザーname",
-    "DiscordID",
-    "ユーザーID",
-    "バトルタグ",
-    "プラットフォーム",
-    "タンクランク",
-    "ダメージランク",
-    "サポートランク",
-    "メインロール",
-    "希望ゲスト",
-    "コメント",
+    "初回応募日時",   # A
+    "ユーザーname",   # B
+    "DiscordID",      # C
+    "ユーザーID",     # D
+    "バトルタグ",     # E
+    "プラットフォーム", # F
+    "タンクランク",   # G
+    "ダメージランク", # H
+    "サポートランク", # I
+    "メインロール",   # J
+    "希望ゲスト",     # K
+    "コメント",       # L
+    "ステータス",     # M
+    "最終更新日時",   # N
 ]
+
+# ステータス定数
+STATUS_NEW    = "回答済み"
+STATUS_EDITED = "編集済み"
+STATUS_CANCELLED = "取り消し済み"
 
 
 def _get_sheet(thread_name: str) -> gspread.Worksheet:
@@ -75,28 +82,73 @@ def upsert_participant(user_id: int, display_name: str, discord_name: str, answe
     jst = timezone(timedelta(hours=9))
     now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
 
-    row_data = [
-        now,
-        display_name,
-        discord_name,
-        str(user_id),
-        answers.get("battletag", ""),
-        answers.get("platform", ""),
-        answers.get("tank_rank", ""),
-        answers.get("dps_rank", ""),
-        answers.get("support_rank", ""),
-        answers.get("main_role", ""),
-        answers.get("preferred_guest", ""),
-        answers.get("comment", ""),
-    ]
+    col_d = sheet.col_values(4)
+    user_id_str = str(user_id)
+    is_existing = user_id_str in col_d
+    status = STATUS_EDITED if is_existing else STATUS_NEW
+
+    if is_existing:
+        row_index = col_d.index(user_id_str) + 1
+        # 初回応募日時（A列）を保持する
+        first_submitted_at = sheet.cell(row_index, 1).value or now
+        row_data = [
+            first_submitted_at,
+            display_name,
+            discord_name,
+            str(user_id),
+            answers.get("battletag", ""),
+            answers.get("platform", ""),
+            answers.get("tank_rank", ""),
+            answers.get("dps_rank", ""),
+            answers.get("support_rank", ""),
+            answers.get("main_role", ""),
+            answers.get("preferred_guest", ""),
+            answers.get("comment", ""),
+            status,
+            now,
+        ]
+        sheet.update(f"A{row_index}:N{row_index}", [row_data])
+        print(f"[Sheets] 既存行を更新: row={row_index}, status={status}")
+    else:
+        row_data = [
+            now,
+            display_name,
+            discord_name,
+            str(user_id),
+            answers.get("battletag", ""),
+            answers.get("platform", ""),
+            answers.get("tank_rank", ""),
+            answers.get("dps_rank", ""),
+            answers.get("support_rank", ""),
+            answers.get("main_role", ""),
+            answers.get("preferred_guest", ""),
+            answers.get("comment", ""),
+            status,
+            now,
+        ]
+        sheet.append_row(row_data)
+        print(f"[Sheets] 新規行を追加, status={status}")
+
+
+def cancel_participant(user_id: int, thread_name: str):
+    """スプシの該当ユーザー行のステータスを「取り消し済み」に更新する"""
+    print(f"[Sheets] cancel_participant 開始: user_id={user_id}, thread={thread_name}")
+    try:
+        sheet = _get_sheet(thread_name)
+    except Exception as e:
+        print(f"[Sheets] cancel_participant: シート取得失敗 ({e})")
+        return
 
     col_d = sheet.col_values(4)
     user_id_str = str(user_id)
 
-    if user_id_str in col_d:
-        row_index = col_d.index(user_id_str) + 1
-        sheet.update(f"A{row_index}:L{row_index}", [row_data])
-        print(f"[Sheets] 既存行を更新: row={row_index}")
-    else:
-        sheet.append_row(row_data)
-        print(f"[Sheets] 新規行を追加")
+    if user_id_str not in col_d:
+        print(f"[Sheets] cancel_participant: ユーザーが見つからない (user_id={user_id})")
+        return
+
+    row_index = col_d.index(user_id_str) + 1
+    jst = timezone(timedelta(hours=9))
+    now = datetime.now(jst).strftime("%Y-%m-%d %H:%M:%S")
+    # ステータス(M列=13)と最終更新日時(N列=14)をまとめて更新
+    sheet.update(f"M{row_index}:N{row_index}", [[STATUS_CANCELLED, now]])
+    print(f"[Sheets] ステータスを「取り消し済み」に更新: row={row_index}")

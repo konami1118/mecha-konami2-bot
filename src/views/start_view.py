@@ -3,10 +3,12 @@
 スレッドに投稿される「応募する」ボタン
 """
 
+import asyncio
 import json
 import os
 import discord
 from src.forms.session import store
+from src.sheets import cancel_participant
 from src.views.form_view import FormView
 
 SUBMISSIONS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "submissions")
@@ -47,35 +49,12 @@ class StartView(discord.ui.View):
             await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
 
     async def _on_reset(self, interaction: discord.Interaction):
-        user_id = interaction.user.id
-        thread = interaction.channel
-        thread_id = thread.id
-
-        # セッション削除
-        store.delete(user_id)
-
-        # submissions.json から該当ユーザーの応募を削除
-        path = os.path.join(SUBMISSIONS_DIR, f"{thread_id}.json")
-        msg_deleted = False
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                submissions = json.load(f)
-            entry = submissions.pop(str(user_id), None)
-            if entry and entry.get("message_id"):
-                try:
-                    msg = await thread.fetch_message(entry["message_id"])
-                    await msg.delete()
-                    msg_deleted = True
-                except discord.NotFound:
-                    pass
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(submissions, f, ensure_ascii=False, indent=2)
-
-        print(f"[CANCEL] {interaction.user} ({user_id}) が応募を取り消し / スレッド: {thread.name} / メッセージ削除: {msg_deleted}")
-        if msg_deleted:
-            await interaction.response.send_message("応募を取り消しました。", ephemeral=True)
-        else:
-            await interaction.response.send_message("応募データが見つかりませんでした（未応募または取り消し済み）。", ephemeral=True)
+        confirm_view = _CancelConfirmView(interaction.user.id, interaction.channel)
+        await interaction.response.send_message(
+            "本当に応募を取り消しますか？",
+            view=confirm_view,
+            ephemeral=True,
+        )
 
     async def _on_click(self, interaction: discord.Interaction):
         from src.utils import extract_guests_from_title
@@ -102,3 +81,51 @@ class StartView(discord.ui.View):
             view=view,
             ephemeral=True
         )
+
+
+class _CancelConfirmView(discord.ui.View):
+    def __init__(self, user_id: int, thread):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+        self.thread = thread
+
+    async def _do_cancel(self, interaction: discord.Interaction):
+        thread_id = self.thread.id
+        store.delete(self.user_id)
+
+        path = os.path.join(SUBMISSIONS_DIR, f"{thread_id}.json")
+        msg_deleted = False
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                submissions = json.load(f)
+            entry = submissions.pop(str(self.user_id), None)
+            if entry and entry.get("message_id"):
+                try:
+                    msg = await self.thread.fetch_message(entry["message_id"])
+                    await msg.delete()
+                    msg_deleted = True
+                except discord.NotFound:
+                    pass
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(submissions, f, ensure_ascii=False, indent=2)
+
+        print(f"[CANCEL] {interaction.user} ({self.user_id}) が応募を取り消し / スレッド: {self.thread.name} / メッセージ削除: {msg_deleted}")
+        if msg_deleted:
+            await asyncio.to_thread(cancel_participant, self.user_id, self.thread.name)
+            await interaction.response.edit_message(content="応募を取り消しました。", view=None)
+        else:
+            await interaction.response.edit_message(content="応募データが見つかりませんでした（未応募または取り消し済み）。", view=None)
+
+    @discord.ui.button(label="はい、取り消す", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの操作ではありません。", ephemeral=True)
+            return
+        await self._do_cancel(interaction)
+
+    @discord.ui.button(label="キャンセル", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("これはあなたの操作ではありません。", ephemeral=True)
+            return
+        await interaction.response.edit_message(content="取り消しをキャンセルしました。", view=None)
