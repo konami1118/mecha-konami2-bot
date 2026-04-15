@@ -114,11 +114,9 @@ class _CancelConfirmView(discord.ui.View):
 
         path = os.path.join(SUBMISSIONS_DIR, f"{thread_id}.json")
         entry_found = False
-        print(f"[DEBUG] _do_cancel: path={path}, exists={os.path.exists(path)}, user_id={self.user_id}")
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 submissions = json.load(f)
-            print(f"[DEBUG] _do_cancel: JSONキー={list(submissions.keys())}")
             entry = submissions.pop(str(self.user_id), None)
             if entry:
                 entry_found = True
@@ -128,8 +126,9 @@ class _CancelConfirmView(discord.ui.View):
                         await msg.delete()
                     except discord.NotFound:
                         pass
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(submissions, f, ensure_ascii=False, indent=2)
+                # エントリが見つかった場合のみJSONを更新する
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(submissions, f, ensure_ascii=False, indent=2)
 
         print(f"[CANCEL] {interaction.user} ({self.user_id}) が応募を取り消し / スレッド: {self.thread.name} / エントリ存在: {entry_found}")
         if entry_found:
