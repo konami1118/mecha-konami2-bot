@@ -37,8 +37,13 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
     import traceback
     print(f"[ERROR] コマンドエラー: {error}")
     traceback.print_exc()
-    if not interaction.response.is_done():
-        await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
+        else:
+            await interaction.followup.send(f"エラーが発生しました: {error}", ephemeral=True)
+    except discord.HTTPException:
+        pass
 
 
 async def _session_cleanup_loop():
@@ -72,7 +77,11 @@ async def on_ready():
     guild=discord.Object(id=config.SERVER_ID)
 )
 async def apply_open(interaction: discord.Interaction):
-    await interaction.response.defer()
+    try:
+        await interaction.response.defer()
+    except discord.NotFound:
+        print("[WARN] apply_open: インタラクションが期限切れ（defer失敗）")
+        return
 
     if not _is_admin(interaction):
         await interaction.followup.send("このコマンドは管理者のみ使用できます。", ephemeral=True)
@@ -118,7 +127,11 @@ async def apply_open(interaction: discord.Interaction):
     guild=discord.Object(id=config.SERVER_ID)
 )
 async def apply_close(interaction: discord.Interaction):
-    await interaction.response.defer()
+    try:
+        await interaction.response.defer()
+    except discord.NotFound:
+        print("[WARN] apply_close: インタラクションが期限切れ（defer失敗）")
+        return
 
     if not _is_admin(interaction):
         await interaction.followup.send("このコマンドは管理者のみ使用できます。", ephemeral=True)
