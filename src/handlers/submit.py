@@ -60,7 +60,6 @@ async def handle_submit(interaction: discord.Interaction, session: Session, even
     submissions[user_id_str] = {"message_id": msg.id, "answers": session.answers}
     _save_submissions(thread_id, submissions)
     print(f"[SUBMIT] {user} ({user.id}) が応募完了 / スレッド: {thread.name} / 回答: {session.answers}")
-    print(f"[DEBUG] 応募embed message_id={msg.id}")
     await asyncio.to_thread(upsert_participant, user.id, user.display_name, str(user), session.answers, thread_name=thread.name)
 
     # 応募ボタンメッセージを一番下に移動
@@ -68,14 +67,12 @@ async def handle_submit(interaction: discord.Interaction, session: Session, even
         from src.views.start_view import StartView
         view_info = bot_state.active_views[thread_id]
         old_msg_id = bot_state.apply_messages.get(thread_id)
-        print(f"[DEBUG] old apply_message_id={old_msg_id}, 応募embed message_id={msg.id}, 一致={old_msg_id == msg.id}")
         if old_msg_id:
             try:
                 old_msg = await thread.fetch_message(old_msg_id)
-                print(f"[DELETE] 旧apply_message削除: message_id={old_msg_id}")
                 await old_msg.delete()
             except discord.NotFound:
-                print(f"[DEBUG] 旧apply_message見つからず (message_id={old_msg_id})")
+                pass
         new_view = StartView(guests=view_info.guests, event_type=view_info.event_type, is_open=True)
         bot_state.active_views[thread_id] = new_view
         event_label = "コーチングイベント" if view_info.event_type == "coaching" else "対抗カスタム"
