@@ -94,5 +94,6 @@ class CommentModal(discord.ui.Modal, title="コメントを入力してくださ
             import traceback
             print(f"[ERROR] handle_submit エラー: {e}")
             traceback.print_exc()
+            await interaction.edit_original_response(content="⚠️ 応募処理中にエラーが発生しました。もう一度お試しください。", view=None)
         finally:
             store.delete(self.user_id)

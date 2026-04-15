@@ -55,6 +55,14 @@ class SessionStore:
     def has_active(self, user_id: int) -> bool:
         return self.get(user_id) is not None
 
+    def cleanup_expired(self):
+        """期限切れセッションを一括削除する"""
+        expired = [uid for uid, s in self._sessions.items() if s.is_expired()]
+        for uid in expired:
+            del self._sessions[uid]
+        if expired:
+            print(f"[Session] 期限切れセッションを削除: {len(expired)} 件")
+
 
 # グローバルインスタンス
 store = SessionStore()

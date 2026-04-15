@@ -7,11 +7,13 @@
   /apply_close  - 応募受付を締め切る（管理者ロール限定）
 """
 
+import asyncio
 import discord
 from discord import app_commands
 import config
 from src.views.start_view import StartView
 from src.utils import extract_guests_from_title
+from src.forms.session import store
 import src.bot_state as bot_state
 
 intents = discord.Intents.default()
@@ -39,6 +41,13 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
         await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
 
 
+async def _session_cleanup_loop():
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        await asyncio.sleep(300)  # 5分ごと
+        store.cleanup_expired()
+
+
 @bot.event
 async def on_ready():
     # 永続ビューを登録（再起動後も応募ボタンが動くように）
@@ -52,6 +61,7 @@ async def on_ready():
         bot_state.active_views[tid] = view
         bot_state.apply_messages[tid] = info["msg_id"]
 
+    bot.loop.create_task(_session_cleanup_loop())
     await tree.sync(guild=discord.Object(id=config.SERVER_ID))
     print(f"Bot起動: {bot.user}")
 

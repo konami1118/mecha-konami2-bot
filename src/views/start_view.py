@@ -130,3 +130,12 @@ class _CancelConfirmView(discord.ui.View):
             await interaction.response.send_message("これはあなたの操作ではありません。", ephemeral=True)
             return
         await interaction.response.edit_message(content="取り消しをキャンセルしました。", view=None)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item):
+        import traceback
+        print(f"[ERROR] _CancelConfirmView エラー: {error}")
+        traceback.print_exc()
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(content="⚠️ エラーが発生しました。もう一度お試しください。", view=None)
+        else:
+            await interaction.edit_original_response(content="⚠️ エラーが発生しました。もう一度お試しください。", view=None)
