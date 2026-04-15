@@ -70,6 +70,7 @@ async def handle_submit(interaction: discord.Interaction, session: Session, even
         if old_msg_id:
             try:
                 old_msg = await thread.fetch_message(old_msg_id)
+                print(f"[DELETE] 旧apply_message削除: message_id={old_msg_id}")
                 await old_msg.delete()
             except discord.NotFound:
                 pass

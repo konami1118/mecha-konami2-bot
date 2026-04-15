@@ -54,6 +54,7 @@ class StartView(discord.ui.View):
             pass
 
     async def _on_reset(self, interaction: discord.Interaction):
+        print(f"[RESET] {interaction.user} が応募取り消しボタンを押した（ダイアログ表示のみ、削除なし）")
         try:
             confirm_view = _CancelConfirmView(interaction.user.id, interaction.channel)
             await interaction.response.send_message(
@@ -122,6 +123,7 @@ class _CancelConfirmView(discord.ui.View):
                 entry_found = True
                 if entry.get("message_id"):
                     try:
+                        print(f"[DELETE] 応募embed削除: message_id={entry['message_id']}, user={interaction.user}")
                         msg = await self.thread.fetch_message(entry["message_id"])
                         await msg.delete()
                     except discord.NotFound:
