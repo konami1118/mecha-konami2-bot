@@ -94,23 +94,24 @@ class _CancelConfirmView(discord.ui.View):
         store.delete(self.user_id)
 
         path = os.path.join(SUBMISSIONS_DIR, f"{thread_id}.json")
-        msg_deleted = False
+        entry_found = False
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 submissions = json.load(f)
             entry = submissions.pop(str(self.user_id), None)
-            if entry and entry.get("message_id"):
-                try:
-                    msg = await self.thread.fetch_message(entry["message_id"])
-                    await msg.delete()
-                    msg_deleted = True
-                except discord.NotFound:
-                    pass
+            if entry:
+                entry_found = True
+                if entry.get("message_id"):
+                    try:
+                        msg = await self.thread.fetch_message(entry["message_id"])
+                        await msg.delete()
+                    except discord.NotFound:
+                        pass
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(submissions, f, ensure_ascii=False, indent=2)
 
-        print(f"[CANCEL] {interaction.user} ({self.user_id}) が応募を取り消し / スレッド: {self.thread.name} / メッセージ削除: {msg_deleted}")
-        if msg_deleted:
+        print(f"[CANCEL] {interaction.user} ({self.user_id}) が応募を取り消し / スレッド: {self.thread.name} / エントリ存在: {entry_found}")
+        if entry_found:
             await asyncio.to_thread(cancel_participant, self.user_id, self.thread.name)
             await interaction.response.edit_message(content="応募を取り消しました。", view=None)
         else:
