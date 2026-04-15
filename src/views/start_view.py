@@ -45,23 +45,34 @@ class StartView(discord.ui.View):
         import traceback
         print(f"[ERROR] StartView エラー: {error}")
         traceback.print_exc()
-        if not interaction.response.is_done():
-            await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
+            else:
+                await interaction.followup.send(f"エラーが発生しました: {error}", ephemeral=True)
+        except discord.HTTPException:
+            pass
 
     async def _on_reset(self, interaction: discord.Interaction):
-        confirm_view = _CancelConfirmView(interaction.user.id, interaction.channel)
-        await interaction.response.send_message(
-            "本当に応募を取り消しますか？",
-            view=confirm_view,
-            ephemeral=True,
-        )
+        try:
+            confirm_view = _CancelConfirmView(interaction.user.id, interaction.channel)
+            await interaction.response.send_message(
+                "本当に応募を取り消しますか？",
+                view=confirm_view,
+                ephemeral=True,
+            )
+        except discord.NotFound:
+            print("[WARN] _on_reset: インタラクションが期限切れ")
 
     async def _on_click(self, interaction: discord.Interaction):
         from src.utils import extract_guests_from_title
         thread = interaction.channel
         guests, event_type = extract_guests_from_title(thread.name)
         if not guests:
-            await interaction.response.send_message("スレッド情報を取得できませんでした。管理者にお知らせください。", ephemeral=True)
+            try:
+                await interaction.response.send_message("スレッド情報を取得できませんでした。管理者にお知らせください。", ephemeral=True)
+            except discord.NotFound:
+                pass
             return
 
         user_id = interaction.user.id
@@ -69,18 +80,21 @@ class StartView(discord.ui.View):
 
         existing = store.get(user_id)
         if existing:
-            # 古いセッションは破棄して再スタート
             store.delete(user_id)
 
         store.create(user_id, thread_id)
         print(f"[START] {interaction.user} ({interaction.user.id}) が応募を開始 / スレッド: {thread.name} / イベント: {event_type}")
 
         view = FormView(user_id, guests, event_type=event_type, start_interaction=interaction)
-        await interaction.response.send_message(
-            view.current_prompt(),
-            view=view,
-            ephemeral=True
-        )
+        try:
+            await interaction.response.send_message(
+                view.current_prompt(),
+                view=view,
+                ephemeral=True
+            )
+        except discord.NotFound:
+            print(f"[WARN] _on_click: インタラクションが期限切れ (user_id={user_id})")
+            store.delete(user_id)
 
 
 class _CancelConfirmView(discord.ui.View):

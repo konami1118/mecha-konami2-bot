@@ -286,8 +286,13 @@ class FormView(discord.ui.View):
         import traceback
         print(f"[ERROR] FormView エラー: {error}")
         traceback.print_exc()
-        if not interaction.response.is_done():
-            await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.send_message(f"エラーが発生しました: {error}", ephemeral=True)
+            else:
+                await interaction.followup.send(f"エラーが発生しました: {error}", ephemeral=True)
+        except discord.HTTPException:
+            pass
 
     async def on_timeout(self):
         pass  # セッションは SESSION_TIMEOUT_SECONDS で自動失効するため削除不要
