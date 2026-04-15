@@ -80,6 +80,11 @@ class StartView(discord.ui.View):
 
         existing = store.get(user_id)
         if existing:
+            # 5秒以内に作られたセッションはダブルクリックとみなして無視
+            import time
+            if time.time() - existing.created_at < 5:
+                print(f"[WARN] _on_click: ダブルクリックを無視 (user_id={user_id})")
+                return
             store.delete(user_id)
 
         store.create(user_id, thread_id)
