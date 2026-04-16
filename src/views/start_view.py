@@ -66,14 +66,17 @@ class StartView(discord.ui.View):
             print("[WARN] _on_reset: インタラクションが期限切れ")
 
     async def _on_click(self, interaction: discord.Interaction):
+        try:
+            await interaction.response.defer(ephemeral=True)
+        except discord.NotFound:
+            print(f"[WARN] _on_click: インタラクションが期限切れ（defer失敗） (user_id={interaction.user.id})")
+            return
+
         from src.utils import extract_guests_from_title
         thread = interaction.channel
         guests, event_type = extract_guests_from_title(thread.name)
         if not guests:
-            try:
-                await interaction.response.send_message("スレッド情報を取得できませんでした。管理者にお知らせください。", ephemeral=True)
-            except discord.NotFound:
-                pass
+            await interaction.followup.send("スレッド情報を取得できませんでした。管理者にお知らせください。", ephemeral=True)
             return
 
         user_id = interaction.user.id
@@ -85,6 +88,10 @@ class StartView(discord.ui.View):
             import time
             if time.time() - existing.created_at < 5:
                 print(f"[WARN] _on_click: ダブルクリックを無視 (user_id={user_id})")
+                try:
+                    await interaction.delete_original_response()
+                except discord.HTTPException:
+                    pass
                 return
             store.delete(user_id)
 
@@ -92,15 +99,11 @@ class StartView(discord.ui.View):
         print(f"[START] {interaction.user} ({interaction.user.id}) が応募を開始 / スレッド: {thread.name} / イベント: {event_type}")
 
         view = FormView(user_id, guests, event_type=event_type, start_interaction=interaction)
-        try:
-            await interaction.response.send_message(
-                view.current_prompt(),
-                view=view,
-                ephemeral=True
-            )
-        except discord.NotFound:
-            print(f"[WARN] _on_click: インタラクションが期限切れ (user_id={user_id})")
-            store.delete(user_id)
+        await interaction.followup.send(
+            view.current_prompt(),
+            view=view,
+            ephemeral=True
+        )
 
 
 class _CancelConfirmView(discord.ui.View):
