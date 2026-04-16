@@ -43,6 +43,11 @@ async def handle_submit(interaction: discord.Interaction, session: Session, even
     thread_id = thread.id
     user_id_str = str(user.id)
 
+    # スレッドがアーカイブされていれば解除する
+    if isinstance(thread, discord.Thread) and thread.archived:
+        print(f"[INFO] スレッドがアーカイブされているため解除を試みます: {thread.name}")
+        await thread.edit(archived=False)
+
     submissions = _load_submissions(thread_id)
     embed = build_submission_embed(user, session.answers, event_type=event_type)
 
