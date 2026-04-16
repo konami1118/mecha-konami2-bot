@@ -43,9 +43,8 @@ async def handle_submit(interaction: discord.Interaction, session: Session, even
     thread_id = thread.id
     user_id_str = str(user.id)
 
-    # スレッドがアーカイブされていれば解除する
-    if isinstance(thread, discord.Thread) and thread.archived:
-        print(f"[INFO] スレッドがアーカイブされているため解除を試みます: {thread.name}")
+    # キャッシュのarchived状態は古い場合があるためThreadなら常にunarchiveを試みる
+    if isinstance(thread, discord.Thread):
         await thread.edit(archived=False)
 
     submissions = _load_submissions(thread_id)
