@@ -93,7 +93,7 @@ async def apply_open(interaction: discord.Interaction):
         return
 
     guests, event_type = extract_guests_from_title(thread.name)
-    if not guests:
+    if not guests and event_type != "guestless":
         await interaction.followup.send(
             "スレッドタイトルからゲスト名を取得できませんでした。\n"
             "タイトルに `ゲスト1 vs ゲスト2` の形式が含まれているか確認してください。",
@@ -104,13 +104,19 @@ async def apply_open(interaction: discord.Interaction):
     view = StartView(guests=guests, event_type=event_type, is_open=True)
     bot_state.active_views[thread.id] = view
 
-    event_label = "コーチングイベント" if event_type == "coaching" else "対抗カスタム"
+    if event_type == "coaching":
+        event_label = "コーチングイベント"
+    elif event_type == "guestless":
+        event_label = "ゲストなしカスタム"
+    else:
+        event_label = "対抗カスタム"
     embed = discord.Embed(
         title="📢 応募受付を開始しました！",
         color=discord.Color.blurple()
     )
     embed.add_field(name="イベント", value=event_label, inline=True)
-    embed.add_field(name="ゲスト", value=" / ".join(guests), inline=True)
+    if event_type != "guestless":
+        embed.add_field(name="ゲスト", value=" / ".join(guests), inline=True)
     embed.set_footer(text="下のボタンから応募してください。")
     msg = await interaction.followup.send(
         embed=embed,

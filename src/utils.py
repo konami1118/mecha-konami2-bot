@@ -12,12 +12,16 @@ def extract_guests_from_title(title: str) -> tuple[list[str], str]:
 
     戻り値:
         (guests, event_type)
-        event_type: "coaching" (＆区切り) or "custom" (それ以外)
+        event_type:
+            "coaching"  (＆区切り)
+            "custom"    (vs / & / × / 対 区切り)
+            "guestless" (ゲストなし)
 
     対応パターン例:
     - "なるる vs 雪のれんこん"  → custom
     - "末っ子かわい × もふもふゆ" → custom
     - "なるる ＆ 雪のれんこん"   → coaching
+    - "第3回 カスタム"           → guestless
     """
     # ＆（全角）のみコーチング、それ以外はカスタム
     m_coaching = re.search(r'(\S+)\s*＆\s*(\S+)', title)
@@ -33,7 +37,7 @@ def extract_guests_from_title(title: str) -> tuple[list[str], str]:
         g1, g2 = _clean(m_custom.group(1)), _clean(m_custom.group(2))
         return [g for g in [g1, g2] if g], "custom"
 
-    return [], "custom"
+    return [], "guestless"
 
 
 def _clean(s: str) -> str:

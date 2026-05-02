@@ -55,8 +55,9 @@ def build_submission_embed(user: discord.Member, answers: dict, event_type: str 
     embed.add_field(name=f"{EMOJI_DAMAGE} ダメージ最高ランク", value=_rank_with_emoji(answers.get("dps_rank", "")), inline=True)
     embed.add_field(name=f"{EMOJI_SUPPORT} サポート最高ランク", value=_rank_with_emoji(answers.get("support_rank", "")), inline=True)
     embed.add_field(name=f"{EMOJI_PLATFORM} メインロール", value=answers.get("main_role", "未入力"), inline=True)
-    guest_label = f"{EMOJI_GUEST} コーチングしてもらいたいゲスト" if event_type == "coaching" else f"{EMOJI_GUEST} 一緒に戦いたいゲスト"
-    embed.add_field(name=guest_label, value=answers.get("preferred_guest", "未入力"), inline=True)
+    if event_type != "guestless":
+        guest_label = f"{EMOJI_GUEST} コーチングしてもらいたいゲスト" if event_type == "coaching" else f"{EMOJI_GUEST} 一緒に戦いたいゲスト"
+        embed.add_field(name=guest_label, value=answers.get("preferred_guest", "未入力"), inline=True)
 
     comment = answers.get("comment", "")
     if comment:

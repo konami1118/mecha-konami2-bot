@@ -6,7 +6,7 @@
 
 import discord
 from src.forms.steps import (
-    STEPS, STEP_LABELS, RANK_TIERS, RANK_DIVISIONS, MAIN_ROLES, RANK_STEPS, PLATFORMS,
+    STEP_LABELS, RANK_TIERS, RANK_DIVISIONS, MAIN_ROLES, RANK_STEPS, PLATFORMS, get_steps,
 )
 from src.forms.session import store
 from src.views.modals import BattletagModal, CommentModal
@@ -50,11 +50,12 @@ class FormView(discord.ui.View):
         session = store.get(self.user_id)
         if not session:
             return "セッションが切れました。最初からやり直してください。"
-        step_key = STEPS[session.current_step]
+        steps = get_steps(self.event_type)
+        step_key = steps[session.current_step]
         label = STEP_LABELS[step_key]
         if step_key == "preferred_guest" and self.event_type == "coaching":
             label = "コーチングしてもらいたいゲスト"
-        return f"**【{session.current_step + 1}/{len(STEPS)}】{label}** を選択してください。"
+        return f"**【{session.current_step + 1}/{len(steps)}】{label}** を選択してください。"
 
     def _build(self):
         self.clear_items()
@@ -62,7 +63,7 @@ class FormView(discord.ui.View):
         if not session:
             return
 
-        step_key = STEPS[session.current_step]
+        step_key = get_steps(self.event_type)[session.current_step]
 
         if step_key == "battletag":
             btn = discord.ui.Button(label="バトルタグを入力する", style=discord.ButtonStyle.primary, row=0)
@@ -206,7 +207,7 @@ class FormView(discord.ui.View):
             await interaction.response.send_message("セッションが切れました。最初からやり直してください。", ephemeral=True)
             return
 
-        step_key = STEPS[session.current_step]
+        step_key = get_steps(self.event_type)[session.current_step]
         if step_key not in self._pending:
             self._pending[step_key] = {}
 
@@ -252,11 +253,12 @@ class FormView(discord.ui.View):
             await interaction.response.send_message("セッションが切れました。最初からやり直してください。", ephemeral=True)
             return
 
-        step_key = STEPS[session.current_step]
+        steps = get_steps(self.event_type)
+        step_key = steps[session.current_step]
         session.answer(step_key, value)
         session.advance()
 
-        if session.current_step >= len(STEPS):
+        if session.current_step >= len(steps):
             from src.handlers.submit import handle_submit
             await interaction.response.edit_message(content="⏳ 処理中...", view=None)
             try:

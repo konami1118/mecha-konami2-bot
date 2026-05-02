@@ -28,6 +28,12 @@ STEPS = [
     "comment",
 ]
 
+
+def get_steps(event_type: str = "custom") -> list[str]:
+    if event_type == "guestless":
+        return [step for step in STEPS if step != "preferred_guest"]
+    return STEPS
+
 STEP_LABELS = {
     "battletag":       "バトルタグ",
     "platform":        "プラットフォーム",

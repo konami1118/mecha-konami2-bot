@@ -79,13 +79,19 @@ async def handle_submit(interaction: discord.Interaction, session: Session, even
                 pass
         new_view = StartView(guests=view_info.guests, event_type=view_info.event_type, is_open=True)
         bot_state.active_views[thread_id] = new_view
-        event_label = "コーチングイベント" if view_info.event_type == "coaching" else "対抗カスタム"
+        if view_info.event_type == "coaching":
+            event_label = "コーチングイベント"
+        elif view_info.event_type == "guestless":
+            event_label = "ゲストなしカスタム"
+        else:
+            event_label = "対抗カスタム"
         embed = discord.Embed(
             title="📢 応募受付中！",
             color=discord.Color.blurple()
         )
         embed.add_field(name="イベント", value=event_label, inline=True)
-        embed.add_field(name="ゲスト", value=" / ".join(view_info.guests), inline=True)
+        if view_info.event_type != "guestless":
+            embed.add_field(name="ゲスト", value=" / ".join(view_info.guests), inline=True)
         embed.set_footer(text="下のボタンから応募してください。")
         new_apply_msg = await thread.send(embed=embed, view=new_view)
         bot_state.apply_messages[thread_id] = new_apply_msg.id

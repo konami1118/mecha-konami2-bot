@@ -75,7 +75,7 @@ class StartView(discord.ui.View):
         from src.utils import extract_guests_from_title
         thread = interaction.channel
         guests, event_type = extract_guests_from_title(thread.name)
-        if not guests:
+        if not guests and event_type != "guestless":
             await interaction.followup.send("スレッド情報を取得できませんでした。管理者にお知らせください。", ephemeral=True)
             return
 
